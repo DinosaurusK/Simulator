@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>РЕШАЙ — И НИКТО НЕ ВЫЛЕТИТ · Пульт Игрока 1</title>
+<link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⏱️</text></svg>'>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0d11; --panel:#0e1319; --ink:#dce4ec; --mut:#7d8894; --line:#232c36;
+    --yellow:#ffc826; --red:#ff4438; --cyan:#54c8ff; --green:#43e97b;
+    --paper:#f4f1e8; --paper-rule:#cfd9e4; --paper-ink:#20242c; --pen-red:#d43d33; --pen-blue:#2b4d8f;
+    --mono:'IBM Plex Mono',monospace; --disp:'Russo One',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--mono);
+    display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;
+    background-image:radial-gradient(90% 60% at 50% 0%, rgba(255,200,38,.05), transparent 60%)}
+  .scanlines{position:fixed;inset:0;pointer-events:none;z-index:90;opacity:.45;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.15) 0 1px, transparent 1px 3px)}
+  #glow{position:fixed;width:460px;height:460px;pointer-events:none;z-index:1;
+    background:radial-gradient(circle, rgba(255,200,38,.06) 0%, transparent 62%);
+    transform:translate(-50%,-50%);mix-blend-mode:screen}
+  @media (hover:none){#glow{display:none}}
+
+  .hud{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
+    padding:12px 22px;border-bottom:1px solid var(--line);background:rgba(10,13,17,.94);position:relative;z-index:20}
+  .hud::after{content:"";position:absolute;left:0;right:0;bottom:-6px;height:6px;
+    background:repeating-linear-gradient(135deg,#0d0f12 0 10px,var(--yellow) 10px 20px);opacity:.85}
+  .hud-title{font-family:var(--disp);font-size:14px;letter-spacing:.08em;color:var(--yellow)}
+  .hud-title small{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.3em;color:var(--mut);margin-top:4px}
+  .serial-plate{border:1px solid #3a4450;background:#10151b;padding:7px 14px;font-size:13px;letter-spacing:.18em;
+    color:var(--yellow);position:relative}
+  .serial-plate::before,.serial-plate::after{content:"●";position:absolute;top:50%;transform:translateY(-50%);
+    font-size:7px;color:#3a4450}
+  .serial-plate::before{left:4px}.serial-plate::after{right:4px}
+
+  .timer-wrap{position:relative;text-align:center}
+  .timer{font-family:var(--disp);font-size:clamp(34px,5vw,52px);letter-spacing:.04em;color:var(--yellow);
+    text-shadow:0 0 26px rgba(255,200,38,.35);line-height:1;transition:color .3s}
+  .timer .colon{animation:blink 1s steps(1) infinite}
+  .timer.danger{color:var(--red);text-shadow:0 0 26px rgba(255,68,56,.55);animation:blink 1s steps(1) infinite}
+  .timer-label{font-size:9px;letter-spacing:.34em;color:var(--mut);margin-top:4px}
+  @keyframes blink{50%{opacity:.25}}
+  .penalty{position:absolute;left:50%;top:-6px;transform:translateX(-50%);font-weight:700;color:var(--red);
+    font-size:15px;pointer-events:none;animation:floatUp 1.2s ease-out forwards}
+  @keyframes floatUp{to{transform:translate(-50%,-34px);opacity:0}}
+
+  .hud-right{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .comm{display:flex;align-items:center;gap:8px;font-size:10px;letter-spacing:.2em;color:var(--mut);
+    border:1px solid var(--line);padding:7px 12px}
+  .comm i{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);
+    animation:blink 1.6s steps(1) infinite}
+  .strikes{display:flex;gap:8px}
+  .strike{width:22px;height:22px;border-radius:50%;border:2px solid #3a4450;display:grid;place-items:center;
+    font-size:12px;color:transparent;transition:all .25s}
+  .strike.used{border-color:var(--red);color:var(--red);box-shadow:0 0 14px rgba(255,68,56,.6);animation:blink .5s steps(1) 3}
+  .progress{font-size:11px;letter-spacing:.16em;color:var(--mut)}
+  .progress b{color:var(--yellow)}
+
+  .desk{flex:1;display:flex;justify-content:center;align-items:flex-start;padding:34px 18px 60px;position:relative;z-index:5}
+  .paper{position:relative;width:min(1000px,100%);background:var(--paper);
+    color:var(--paper-ink);transform:rotate(-.45deg);
+    box-shadow:0 30px 60px rgba(0,0,0,.55), 0 2px 0 rgba(255,255,255,.06) inset;
+    padding:34px 40px 40px 64px;user-select:none;
+    background-image:
+      radial-gradient(120px 90px at 88% 96%, rgba(150,110,50,.14), transparent 70%),
+      repeating-linear-gradient(0deg, transparent 0 27px, var(--paper-rule) 27px 28px)}
+  .paper::before{content:"";position:absolute;top:0;bottom:0;left:44px;width:2px;background:#e2766d;opacity:.8}
+  .paper::after{content:"";position:absolute;top:-9px;left:18%;width:120px;height:26px;transform:rotate(-2deg);
+    background:rgba(255,200,38,.35);border:1px solid rgba(0,0,0,.08)}
+
+  .paper-head{display:flex;justify-content:space-between;gap:18px;flex-wrap:wrap;align-items:flex-start;
+    border-bottom:2px solid var(--paper-ink);padding-bottom:14px}
+  .paper-head h1{font-family:var(--disp);font-size:clamp(17px,2.4vw,24px);letter-spacing:.04em;line-height:1.25}
+  .paper-head h1 small{display:block;font-family:var(--mono);font-weight:400;font-size:10px;
+    letter-spacing:.26em;color:#6a7480;margin-top:6px}
+  .paper-meta{text-align:right;font-size:11px;line-height:1.9;letter-spacing:.1em;color:#39404b}
+  .paper-meta .var{font-family:var(--disp);font-size:20px;color:var(--pen-blue)}
+  .indicators{display:flex;gap:8px;justify-content:flex-end;margin-top:8px;flex-wrap:wrap}
+  .ind{font-size:9px;letter-spacing:.16em;border:1.5px solid #9aa5b1;color:#9aa5b1;padding:4px 9px;opacity:.55}
+  .ind.on{opacity:1;color:var(--paper-ink);border-color:var(--paper-ink);box-shadow:0 0 0 1px rgba(32,36,44,.15)}
+  .ind.on::before{content:"● ";color:var(--pen-red)}
+
+  .tasks{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:26px}
+  @media(max-width:760px){.tasks{grid-template-columns:1fr}}
+  .task{position:relative;border:1.5px solid #8d98a5;padding:16px 18px 20px;background:rgba(255,255,255,.45);
+    transition:border-color .3s, box-shadow .3s}
+  .task:hover{box-shadow:0 4px 18px rgba(30,40,60,.12)}
+  .task.solved{border-color:#3f9e5f}
+  .task-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+  .task-num{flex:none;width:26px;height:26px;border:2px solid var(--pen-blue);border-radius:50%;display:grid;
+    place-items:center;font-family:var(--disp);font-size:13px;color:var(--pen-blue)}
+  .task-title{font-family:var(--disp);font-size:14px;letter-spacing:.06em}
+  .task-status{margin-left:auto;font-size:9px;letter-spacing:.2em;color:#8d98a5}
+  .task.solved .task-status{color:#3f9e5f}
+  .task-note{font-size:11px;color:#5a626d;margin-bottom:12px;line-height:1.6}
+
+  .stamp{position:absolute;top:38%;left:50%;transform:translate(-50%,-50%) rotate(-9deg) scale(2);opacity:0;
+    border:3px solid var(--pen-red);color:var(--pen-red);font-family:var(--disp);font-size:22px;letter-spacing:.14em;
+    padding:6px 16px;background:rgba(244,241,232,.72);pointer-events:none;z-index:6}
+  .task.solved .stamp{animation:stampIn .4s cubic-bezier(.16,1.5,.3,1) forwards}
+  @keyframes stampIn{to{transform:translate(-50%,-50%) rotate(-9deg) scale(1);opacity:1}}
+
+  .answers{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .ans{border:1.5px solid #39404b;background:transparent;font-family:var(--disp);font-size:16px;color:var(--paper-ink);
+    padding:13px 8px;cursor:pointer;letter-spacing:.05em;position:relative;transition:all .18s}
+  .ans small{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:#8d98a5;margin-bottom:4px}
+  .ans:hover:not(:disabled){background:#20242c;color:var(--paper);transform:translateY(-2px)}
+  .ans.wrong{border-color:var(--pen-red);color:var(--pen-red);opacity:.55}
+  .ans.wrong::after{content:"✗";position:absolute;right:8px;top:4px;font-size:16px}
+  .ans.right{border-color:#3f9e5f;color:#2c7a48}
+  .ans.right::after{content:"✓";position:absolute;right:8px;top:4px;font-size:16px}
+  .ans:disabled{cursor:default}
+
+  .wires{display:flex;flex-direction:column;gap:12px;padding:4px 2px}
+  .wire{position:relative;height:13px;cursor:crosshair;transition:transform .15s, filter .2s}
+  .wire::before,.wire::after{content:"";position:absolute;top:50%;width:9px;height:9px;border-radius:50%;
+    transform:translateY(-50%);background:#39404b}
+  .wire::before{left:-14px}.wire::after{right:-14px}
+  .wire .body{display:block;height:100%;border-radius:7px;box-shadow:0 2px 4px rgba(0,0,0,.25), inset 0 2px 2px rgba(255,255,255,.35)}
+  .w-red .body{background:#d63c31}.w-yellow .body{background:#e8b522}
+  .w-blue .body{background:#3a6fc4}.w-green .body{background:#3f9e5f}.w-white .body{background:#e9e7de;border:1px solid #b8bdc6}
+  .wire:hover{transform:scaleX(1.015)}
+  .wire.cut{filter:grayscale(.55)}
+  .wire.cut .body::after{content:"";position:absolute;left:24%;top:-7px;width:4px;height:27px;background:var(--pen-red);
+    transform:rotate(18deg);box-shadow:6px 2px 0 rgba(212,61,51,.7)}
+  .wire.shake{animation:shakeX .3s}
+  @keyframes shakeX{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+
+  .code-row{display:flex;gap:18px;align-items:flex-start;flex-wrap:wrap}
+  .code-display{display:flex;gap:8px;margin-bottom:12px}
+  .code-cell{width:36px;height:42px;border:1.5px solid #39404b;display:grid;place-items:center;
+    font-family:var(--disp);font-size:20px;background:rgba(255,255,255,.5)}
+  .code-cell.filled{color:var(--pen-blue)}
+  .keypad{display:grid;grid-template-columns:repeat(3,44px);gap:7px}
+  .key{border:1.5px solid #39404b;background:rgba(255,255,255,.5);font-family:var(--disp);font-size:15px;
+    padding:10px 0;cursor:pointer;color:var(--paper-ink);transition:all .15s}
+  .key:hover{background:#20242c;color:var(--paper)}
+  .key:active{transform:translateY(2px)}
+  .key.op{font-family:var(--mono);font-size:13px}
+  .keypad.shake{animation:shakeX .3s}
+
+  .hold-row{display:flex;align-items:center;gap:26px;flex-wrap:wrap}
+  .hold-btn{width:110px;height:110px;border-radius:50%;border:none;cursor:pointer;font-family:var(--disp);
+    font-size:15px;letter-spacing:.06em;color:#fff;background:radial-gradient(circle at 34% 30%, #ff6a5e, #c22b21 70%);
+    box-shadow:0 6px 0 #7c1811, 0 12px 22px rgba(0,0,0,.35);transition:transform .1s, box-shadow .1s;touch-action:none}
+  .hold-btn:active,.hold-btn.holding{transform:translateY(5px);box-shadow:0 1px 0 #7c1811, 0 4px 10px rgba(0,0,0,.35)}
+  .lamp{width:30px;height:30px;border-radius:50%;border:2px solid #39404b;background:#c9c6ba;transition:background .12s, box-shadow .12s}
+  .lamp.lit-y{background:#ffd23f;box-shadow:0 0 18px #ffd23f}
+  .lamp.lit-r{background:#ff4438;box-shadow:0 0 18px #ff4438}
+  .lamp.lit-g{background:#43c96e;box-shadow:0 0 18px #43c96e}
+  .lamp.lit-b{background:#4a9dff;box-shadow:0 0 18px #4a9dff}
+  .lamp-block{display:flex;flex-direction:column;align-items:center;gap:8px}
+  .lamp-block span{font-size:9px;letter-spacing:.22em;color:#5a626d}
+
+  .paper-foot{margin-top:28px;border-top:2px dashed #8d98a5;padding-top:20px;
+    display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+  .sign{font-size:10px;letter-spacing:.2em;color:#6a7480;line-height:1.9}
+  .sign i{font-style:normal;color:#39404b}
+  .submit{border:2.5px solid #39404b;background:transparent;color:#39404b;font-family:var(--disp);
+    font-size:17px;letter-spacing:.1em;padding:16px 34px;cursor:not-allowed;opacity:.55;transition:all .3s}
+  .submit.armed{opacity:1;cursor:pointer;color:var(--pen-red);border-color:var(--pen-red);
+    animation:pulse 1.2s ease-in-out infinite}
+  .submit.armed:hover{background:var(--pen-red);color:#fff;box-shadow:0 8px 26px rgba(212,61,51,.4)}
+  @keyframes pulse{50%{box-shadow:0 0 0 8px rgba(212,61,51,.12)}}
+
+  .overlay{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:rgba(5,7,9,.9);
+    opacity:0;pointer-events:none;transition:opacity .3s}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .ov-card{text-align:center;padding:20px;max-width:640px}
+  .ov-frame{border:4px double currentColor;padding:26px 44px;transform:rotate(-3deg)}
+  .ov-big{font-family:var(--disp);font-size:clamp(40px,8vw,78px);letter-spacing:.06em;line-height:1.05}
+  .ov-sub{font-size:12px;letter-spacing:.3em;margin-top:14px}
+  .ov-stats{margin:26px 0 6px;font-size:12px;letter-spacing:.14em;color:var(--mut);line-height:2.1}
+  .ov-stats b{color:var(--ink)}
+  .ov-btns{display:flex;gap:14px;justify-content:center;margin-top:22px;flex-wrap:wrap}
+  .ov-btns a,.ov-btns button{font-family:var(--disp);font-size:13px;letter-spacing:.1em;padding:14px 26px;
+    cursor:pointer;border:2px solid var(--yellow);background:var(--yellow);color:#141414;text-decoration:none;
+    clip-path:polygon(0 0,calc(100% - 14px) 0,100% 14px,100% 100%,14px 100%,0 calc(100% - 14px));transition:all .2s}
+  .ov-btns .ghost{background:transparent;color:var(--yellow)}
+  .ov-btns a:hover,.ov-btns button:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,200,38,.3)}
+  .st-green{color:#5ee38a}.st-red{color:var(--red)}
+  .count{font-family:var(--disp);font-size:clamp(90px,18vw,170px);color:var(--yellow);
+    text-shadow:0 0 40px rgba(255,200,38,.4);animation:countPop .9s ease-out}
+  .count.go{color:var(--green);text-shadow:0 0 40px rgba(67,233,123,.4);font-size:clamp(40px,9vw,90px);letter-spacing:.06em}
+  @keyframes countPop{from{transform:scale(1.7);opacity:0}}
+
+  #toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);z-index:95;
+    background:#10151b;border:1px solid var(--line);color:var(--ink);font-size:12px;letter-spacing:.1em;
+    padding:11px 22px;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap}
+  #toast.show{opacity:1;transform:translateX(-50%)}
+  #toast.err{border-color:rgba(255,68,56,.5);color:#ffb3ad}
+  #toast.ok{border-color:rgba(67,233,123,.5);color:#a9f4c4}
+
+  body.shake{animation:shakeB .3s linear}
+  @keyframes shakeB{20%{transform:translate(4px,-3px)}40%{transform:translate(-4px,3px)}
+    60%{transform:translate(3px,2px)}80%{transform:translate(-3px,-2px)}}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001s!important;transition-duration:.001s!important}
+  }
+</style>
+</head>
+<body>
+
+<div class="scanlines"></div>
+<div id="glow"></div>
+
+<header class="hud">
+  <div class="hud-title">ПУЛЬТ ИГРОКА 1 · СТУДЕНТ
+    <small>ФОРМА 45-Б · НЕ СМОТРЕТЬ В МАНУАЛ</small>
+  </div>
+  <div class="timer-wrap">
+    <div class="timer" id="timer">10<span class="colon">:</span>00</div>
+    <div class="timer-label">ДО КОНЦА ПАРЫ</div>
+  </div>
+  <div class="hud-right">
+    <div class="comm"><i></i>СВЯЗЬ С МАНУАЛОМ</div>
+    <div>
+      <div style="font-size:9px;letter-spacing:.3em;color:var(--mut);margin-bottom:6px">ОШИБКИ (МАКС. 3)</div>
+      <div class="strikes" id="strikes">
+        <div class="strike">✗</div><div class="strike">✗</div><div class="strike">✗</div>
+      </div>
+    </div>
+    <div class="progress">ЗАДАНИЯ: <b id="prog">0/4</b></div>
+  </div>
+</header>
+
+<main class="desk">
+  <div class="paper" id="paper">
+    <div class="paper-head">
+      <h1>ИТОГОВЫЙ ТЕСТ ПО РАЗМИНИРОВАНИЮ
+        <small>ФАКУЛЬТЕТ САПЁРНЫХ НАУК · КАФЕДРА ДЕДЛАЙНОВ · ПРЕПОДАВАТЕЛЬ: И. И. ЗВОНКОВА</small>
+      </h1>
+      <div class="paper-meta">
+        СЕРИЯ: <span id="serial" style="font-weight:700;letter-spacing:.2em;color:var(--pen-blue)">—</span><br>
+        ВАРИАНТ <span class="var" id="variant">№ —</span>
+        <div class="indicators" id="indicators"></div>
+      </div>
+    </div>
+
+    <div class="tasks">
+
+      <section class="task" id="task1">
+        <div class="stamp">РЕШЕНО</div>
+        <div class="task-head"><div class="task-num">1</div>
+          <div class="task-title">ВЫБЕРИТЕ ОТВЕТ</div>
+          <div class="task-status" data-status>НЕ РЕШЕНО</div></div>
+        <p class="task-note">Обведите один ответ. Какой именно — знает мануал. Спросите Игрока 2.</p>
+        <div class="answers" id="answers"></div>
+      </section>
+
+      <section class="task" id="task2">
+        <div class="stamp">РЕШЕНО</div>
+        <div class="task-head"><div class="task-num">2</div>
+          <div class="task-title">ЭЛЕКТРИЧЕСКАЯ ЦЕПЬ</div>
+          <div class="task-status" data-status>НЕ РЕШЕНО</div></div>
+        <p class="task-note">Зачеркните <b>ровно те</b> провода, что назовёт мануал. Ошибётесь — штраф.</p>
+        <div class="wires" id="wires"></div>
+      </section>
+
+      <section class="task" id="task3">
+        <div class="stamp">РЕШЕНО</div>
+        <div class="task-head"><div class="task-num">3</div>
+          <div class="task-title">КОД ДОСТУПА</div>
+          <div class="task-status" data-status>НЕ РЕШЕНО</div></div>
+        <p class="task-note">Введите 4 цифры. Как их вычислить из серии, варианта и индикаторов — см. мануал.</p>
+        <div class="code-row">
+          <div>
+            <div class="code-display" id="codeDisplay">
+              <div class="code-cell"></div><div class="code-cell"></div>
+              <div class="code-cell"></div><div class="code-cell"></div>
+            </div>
+            <div style="font-size:9px;letter-spacing:.18em;color:#6a7480">ВВОД АВТОМАТИЧЕСКИЙ · «СБР» — ИСПРАВИТЬ</div>
+          </div>
+          <div class="keypad" id="keypad">
+            <button class="key">1</button><button class="key">2</button><button class="key">3</button>
+            <button class="key">4</button><button class="key">5</button><button class="key">6</button>
+            <button class="key">7</button><button class="key">8</button><button class="key">9</button>
+            <button class="key op" data-op="clr">СБР</button><button class="key">0</button>
+            <button class="key op" data-op="del">←</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="task" id="task4">
+        <div class="stamp">РЕШЕНО</div>
+        <div class="task-head"><div class="task-num">4</div>
+          <div class="task-title">КНОПКА «ОТВЕТИТЬ»</div>
+          <div class="task-status" data-status>НЕ РЕШЕНО</div></div>
+        <p class="task-note">Нажмите и <b>удерживайте</b>. Лампа начнёт мигать — отпустите в нужный момент
+          (в какой именно? — спросите Игрока 2).</p>
+        <div class="hold-row">
+          <button class="hold-btn" id="holdBtn">ОТВЕ­ТИТЬ</button>
+          <div class="lamp-block"><div class="lamp" id="lamp"></div><span>ЛАМПА</span></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="paper-foot">
+      <div class="sign">ПОДПИСЬ СТУДЕНТА: <i>…………………</i><br>
+        ЛИСТ ПЕРЕВЕРНУТЬ — ПОЗОР. ГОВОРИТЬ С НАСТАВНИКОМ — ОБЯЗАТЕЛЬНО.</div>
+      <button class="submit" id="submitBtn" disabled>СДАТЬ РАБОТУ</button>
+    </div>
+  </div>
+</main>
+
+<div class="overlay" id="intro"><div class="count" id="introNum">3</div></div>
+
+<div class="overlay" id="winOv">
+  <div class="ov-card">
+    <div class="ov-frame st-green">
+      <div class="ov-sub">ПРИКАЗ ПО ФАКУЛЬТЕТУ</div>
+      <div class="ov-big">ЗАЧЁТ</div>
+      <div class="ov-sub">СТУДЕНТ ДОПУЩЕН К СЛЕДУЮЩЕЙ ПАРЕ</div>
+    </div>
+    <div class="ov-stats" id="winStats"></div>
+    <div class="ov-btns">
+      <button onclick="location.reload()">НОВЫЙ ВАРИАНТ</button>
+      <a class="ghost" href="index.html">НА ГЛАВНЫЙ ЭКРАН</a>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="failOv">
+  <div class="ov-card">
+    <div class="ov-frame st-red">
+      <div class="ov-sub">ПРИКАЗ ПО ФАКУЛЬТЕТУ</div>
+      <div class="ov-big" id="failTitle">ОТЧИСЛЕН</div>
+      <div class="ov-sub" id="failReason"></div>
+    </div>
+    <div class="ov-stats">Решено заданий: <b id="failProg">0 из 4</b></div>
+    <div class="ov-btns">
+      <button onclick="location.reload()">ПЕРЕЗАЧЁТ</button>
+      <a class="ghost" href="index.html">НА ГЛАВНЫЙ ЭКРАН</a>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+const $ = s => document.querySelector(s);
+const rnd = n => Math.floor(Math.random()*n);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+let actx=null, unlocked=false;
+addEventListener('pointerdown',()=>{ try{
+  actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+  if(actx.state==='suspended') actx.resume(); unlocked=true;
+}catch(e){} },{once:false});
+function tone(freq,dur=.06,type='square',vol=.05,delay=0,slide=null){
+  if(!unlocked||!actx) return;
+  try{
+    const t0=actx.currentTime+delay, o=actx.createOscillator(), g=actx.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,t0);
+    if(slide) o.frequency.exponentialRampToValueAtTime(slide,t0+dur);
+    g.gain.setValueAtTime(vol,t0); g.gain.exponentialRampToValueAtTime(.0001,t0+dur);
+    o.connect(g).connect(actx.destination); o.start(t0); o.stop(t0+dur+.02);
+  }catch(e){}
+}
+const snd={
+  click:()=>tone(920,.045,'square',.04),
+  good:()=>{tone(660,.09,'sine',.07);tone(990,.14,'sine',.07,.09);},
+  bad:()=>{tone(190,.32,'sawtooth',.09,0,70);},
+  tick:()=>tone(1100,.03,'square',.05),
+  win:()=>[523,659,784,1047].forEach((f,i)=>tone(f,.16,'triangle',.08,i*.13)),
+  fail:()=>tone(220,.9,'sawtooth',.09,0,55)
+};
+
+const LETTERS='АВЕКМНОРСТУ', VOWELS='АЕИОУЫ';
+const G={ running:false, over:false, time:600, strikes:0, solved:0,
+  serial:'', variant:1, coffee:false, bell:false, pen:false,
+  code:'', correctAns:0, needWires:new Set(), typed:'' };
+
+(function gen(){
+  const L=()=>LETTERS[rnd(LETTERS.length)], D=()=>rnd(10);
+  G.serial = L()+L()+'-'+D()+D()+D()+'-'+L();
+  G.variant = 1+rnd(4);
+  G.bell=Math.random()<.5; G.pen=Math.random()<.5; G.coffee=Math.random()<.5;
+  if(!G.bell&&!G.pen&&!G.coffee) G.bell=true;
+})();
+const digits = G.serial.match(/\d/g).map(Number);
+const vowels = [...G.serial].filter(c=>VOWELS.includes(c)).length;
+const even = digits.filter(d=>d%2===0).length, odd = digits.length-even;
+const lastDigit = digits[digits.length-1];
+
+$('#serial').textContent = G.serial;
+$('#variant').textContent = '№ '+G.variant;
+const indBox=$('#indicators');
+[['ЗВОНОК',G.bell],['КРАСНАЯ РУЧКА',G.pen],['КОФЕ',G.coffee]].forEach(([n,on])=>{
+  const d=document.createElement('div'); d.className='ind'+(on?' on':''); d.textContent=n; indBox.appendChild(d);
+});
+
+/* --- задание 1 --- */
+(function(){
+  const set=new Set(); while(set.size<4) set.add(12+rnd(86));
+  const nums=[...set];
+  let idx;
+  if(even>odd) idx=nums.indexOf(Math.min(...nums));
+  else if(odd>even) idx=nums.indexOf(Math.max(...nums));
+  else idx=1;
+  G.correctAns=idx;
+  const box=$('#answers'), labels=['А','Б','В','Г'];
+  nums.forEach((n,i)=>{
+    const b=document.createElement('button'); b.className='ans';
+    b.innerHTML='<small>ОТВЕТ '+labels[i]+'</small>'+n;
+    b.addEventListener('click',()=>{
+      if(G.over||$('#task1').classList.contains('solved')||b.disabled) return;
+      snd.click();
+      if(i===G.correctAns){ b.classList.add('right'); solveTask(1); }
+      else { b.classList.add('wrong'); b.disabled=true; strike('Неверный ответ'); }
+    });
+    box.appendChild(b);
+  });
+})();
+
+/* --- задание 2 --- */
+(function(){
+  const colors=['red','yellow','blue','green','white'];
+  for(let i=colors.length-1;i>0;i--){const j=rnd(i+1);[colors[i],colors[j]]=[colors[j],colors[i]];}
+  const need = (lastDigit%2===0) ? new Set(['red','yellow']) : new Set(['blue','green']);
+  G.needWires=need;
+  const box=$('#wires'); let cut=new Set();
+  colors.forEach(c=>{
+    const w=document.createElement('div'); w.className='wire w-'+c;
+    w.innerHTML='<span class="body"></span>';
+    w.addEventListener('click',()=>{
+      if(G.over||$('#task2').classList.contains('solved')) return;
+      snd.click();
+      if(!need.has(c)){
+        strike('Не тот провод'); w.classList.add('shake');
+        setTimeout(()=>w.classList.remove('shake'),350); return;
+      }
+      if(cut.has(c)) return;
+      cut.add(c); w.classList.add('cut');
+      if(need.size===cut.size) solveTask(2);
+    });
+    box.appendChild(w);
+  });
+})();
+
+/* --- задание 3 --- */
+(function(){
+  const d1=vowels, d2=(G.variant*2)%10, d3=lastDigit,
+        d4=G.coffee?(d1+d3)%10:7;
+  G.code=''+d1+d2+d3+d4;
+  const cells=[...document.querySelectorAll('.code-cell')];
+  const pad=$('#keypad');
+  function redraw(){ cells.forEach((c,i)=>{
+    c.textContent=G.typed[i]??''; c.classList.toggle('filled',!!G.typed[i]); }); }
+  pad.addEventListener('click',e=>{
+    const k=e.target.closest('.key'); if(!k||G.over) return;
+    if($('#task3').classList.contains('solved')) return;
+    if(k.dataset.op==='clr'){G.typed='';snd.click();redraw();return;}
+    if(k.dataset.op==='del'){G.typed=G.typed.slice(0,-1);snd.click();redraw();return;}
+    if(G.typed.length>=4) return;
+    snd.click(); G.typed+=k.textContent; redraw();
+    if(G.typed.length===4){
+      if(G.typed===G.code){ solveTask(3); }
+      else{ strike('Код не принят'); pad.classList.add('shake');
+        setTimeout(()=>{pad.classList.remove('shake');G.typed='';redraw();},380); }
+    }
+  });
+})();
+
+/* --- задание 4 --- */
+(function(){
+  const btn=$('#holdBtn'), lamp=$('#lamp');
+  const CLS=['lit-y','lit-r','lit-g','lit-b'];
+  const target={1:'lit-y',2:'lit-r',3:'lit-g',4:'lit-b'}[G.variant];
+  let iv=null, cur=null, start=0;
+  function light(cls){ lamp.classList.remove(...CLS); if(cls){lamp.classList.add(cls);} cur=cls; }
+  function startHold(e){
+    e.preventDefault();
+    if(G.over||$('#task4').classList.contains('solved')) return;
+    btn.classList.add('holding'); start=Date.now(); snd.click();
+    iv=setInterval(()=>light(CLS[rnd(4)]),560);
+    light(CLS[rnd(4)]);
+  }
+  function endHold(){
+    if(!iv) return;
+    clearInterval(iv); iv=null; btn.classList.remove('holding');
+    if(G.over||$('#task4').classList.contains('solved')) {light(null);return;}
+    if(Date.now()-start<350){ strike('Кнопку нужно УДЕРЖИВАТЬ'); light(null); return; }
+    if(cur===target){ light(cur); solveTask(4); }
+    else{ strike('Отпущено не на том цвете'); light(null); }
+  }
+  btn.addEventListener('pointerdown',startHold);
+  addEventListener('pointerup',endHold);
+  btn.addEventListener('pointerleave',endHold);
+  addEventListener('keydown',e=>{ if(e.code==='Space'&&!e.repeat&&document.activeElement!==btn){startHold(e);} });
+  addEventListener('keyup',e=>{ if(e.code==='Space') endHold(); });
+  btn.addEventListener('contextmenu',e=>e.preventDefault());
+})();
+
+/* ================= механика ================= */
+const timerEl=$('#timer');
+function fmt(t){ return String(Math.floor(t/60)).padStart(2,'0')+'<span class="colon">:</span>'+String(t%60).padStart(2,'0'); }
+function renderTime(){ timerEl.innerHTML=fmt(Math.max(0,G.time)); timerEl.classList.toggle('danger',G.time<60); }
+
+let ivTimer=null;
+function startTimer(){
+  ivTimer=setInterval(()=>{
+    if(!G.running||G.over) return;
+    G.time--; renderTime();
+    if(G.time<=10&&G.time>0) snd.tick();
+    if(G.time<=0) fail('ВРЕМЯ ВЫШЛО','Пара закончилась раньше, чем вы договорили.');
+  },1000);
+}
+
+function solveTask(n){
+  const t=$('#task'+n);
+  if(t.classList.contains('solved')) return;
+  t.classList.add('solved');
+  t.querySelector('[data-status]').textContent='РЕШЕНО ✓';
+  G.solved++; $('#prog').textContent=G.solved+'/4';
+  snd.good(); toast('Задание '+n+' решено','ok');
+  if(G.solved===4){
+    const s=$('#submitBtn'); s.disabled=false; s.classList.add('armed');
+    toast('Все задания решены — СДАВАЙТЕ РАБОТУ!','ok');
+  }
+}
+
+function strike(msg){
+  if(G.over) return;
+  G.strikes++; snd.bad();
+  document.body.classList.add('shake');
+  setTimeout(()=>document.body.classList.remove('shake'),320);
+  const lamps=document.querySelectorAll('.strike');
+  lamps[G.strikes-1]?.classList.add('used');
+  G.time=Math.max(0,G.time-60); renderTime();
+  const p=document.createElement('div'); p.className='penalty'; p.textContent='−1:00';
+  $('.timer-wrap').appendChild(p); setTimeout(()=>p.remove(),1200);
+  toast('ОШИБКА: '+msg+' (−1:00)','err');
+  if(G.strikes>=3) fail('ОТЧИСЛЕН','Три ошибки. Комиссия непреклонна.');
+}
+
+function fail(title,reason){
+  if(G.over) return; G.over=true; G.running=false;
+  snd.fail();
+  $('#failTitle').textContent=title;
+  $('#failReason').textContent=reason;
+  $('#failProg').textContent=G.solved+' из 4';
+  setTimeout(()=>$('#failOv').classList.add('show'),450);
+}
+
+$('#submitBtn').addEventListener('click',()=>{
+  if(G.over||G.solved<4){ snd.bad(); toast('Сначала решите все задания','err'); return; }
+  G.over=true; G.running=false; snd.win();
+  const m=Math.floor(G.time/60), s=String(G.time%60).padStart(2,'0');
+  const grade=G.strikes===0?'ОТЛИЧНО':G.strikes===1?'ХОРОШО':'УДОВЛ.';
+  $('#winStats').innerHTML=
+    'ОЦЕНКА: <b>'+grade+'</b><br>'+
+    'ОСТАЛОСЬ ВРЕМЕНИ: <b>'+m+':'+s+'</b><br>'+
+    'ОШИБОК: <b>'+G.strikes+' / 3</b>';
+  setTimeout(()=>$('#winOv').classList.add('show'),450);
+});
+
+/* ================= тост / курсор ================= */
+let toastT=null;
+function toast(text,tone=''){
+  const t=$('#toast'); t.textContent=text; t.className='show '+tone;
+  clearTimeout(toastT); toastT=setTimeout(()=>t.className='',2400);
+}
+const glow=$('#glow');
+addEventListener('pointermove',e=>{ glow.style.left=e.clientX+'px'; glow.style.top=e.clientY+'px'; });
+
+/* ================= интро ================= */
+(function intro(){
+  const ov=$('#intro'), num=$('#introNum');
+  renderTime();
+  if(reduced){ ov.classList.remove('show'); G.running=true; startTimer(); return; }
+  ov.classList.add('show');
+  let c=3;
+  const iv=setInterval(()=>{
+    c--;
+    if(c>0){ num.textContent=c; num.classList.remove('go'); snd.tick();
+      num.style.animation='none'; void num.offsetWidth; num.style.animation=''; }
+    else if(c===0){ num.textContent='ПОЕХАЛИ!'; num.classList.add('go'); snd.good();
+      num.style.animation='none'; void num.offsetWidth; num.style.animation=''; }
+    else{ clearInterval(iv); ov.classList.remove('show'); G.running=true; startTimer(); }
+  },900);
+  snd.tick();
+})();
+})();
+</script>
+</body>
+</html>
